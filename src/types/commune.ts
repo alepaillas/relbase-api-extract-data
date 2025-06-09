@@ -1,4 +1,4 @@
-import { Meta } from "./meta";
+import type { Meta } from "./meta.ts";
 
 // Interface for Commune
 export interface Commune {

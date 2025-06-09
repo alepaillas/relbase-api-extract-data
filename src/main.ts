@@ -1,19 +1,22 @@
 import * as dotenv from "dotenv";
 import * as path from "path";
 import * as XLSX from "xlsx";
-import { Customer, CustomerResponse } from "./types/customer";
-import { City, CityResponse } from "./types/city";
-import { Commune, CommuneResponse } from "./types/commune";
-import { Seller, SellersResponse } from "./types/seller";
-import { PaymentType, PaymentTypesResponse } from "./types/payment_type";
-import { User, UsersResponse } from "./types/user";
-import {
+import type { Customer, CustomerResponse } from "./types/customer.ts";
+import type { City, CityResponse } from "./types/city.ts";
+import type { Commune, CommuneResponse } from "./types/commune.ts";
+import type { Seller, SellersResponse } from "./types/seller.ts";
+import type {
+  PaymentType,
+  PaymentTypesResponse,
+} from "./types/payment_type.ts";
+import type { User, UsersResponse } from "./types/user.ts";
+import type {
   Dte,
   DteChild,
   DteDetail,
   DteDetailResponse,
   DteListResponse,
-} from "./types/dte";
+} from "./types/dte.ts";
 
 const envPath = path.resolve(".env");
 dotenv.config({ path: envPath });

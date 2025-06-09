@@ -1,7 +1,7 @@
-import { DteFile } from "./dte_file";
-import { Email } from "./email";
-import { Meta } from "./meta";
-import { Product } from "./product";
+import type { DteFile } from "./dte_file.ts";
+import type { Email } from "./email.ts";
+import type { Meta } from "./meta.ts";
+import type { Product } from "./product.ts";
 
 // Interfaces for DTE data
 export interface Dte {
