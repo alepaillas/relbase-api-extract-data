@@ -128,19 +128,25 @@ async function fetchDteDetails(dteId: number): Promise<DteDetail | undefined> {
 
     const data: DteDetailResponse = await response.json();
 
-    // If seller_id exists but seller isn't in cache, try to get seller name from print endpoint
+    // If seller_id exists but seller isn't in cache, try to get seller info
     if (data.data.seller_id && !cache.sellers.has(data.data.seller_id)) {
-      const sellerName = await fetchSellerNameFromPrint(dteId);
-      if (sellerName) {
-        // Create a temporary seller object with just the name
-        const tempSeller: Seller = {
-          id: data.data.seller_id,
-          first_name: sellerName.split(" ")[0] || "",
-          last_name: sellerName.split(" ").slice(1).join(" ") || "",
-          role: null,
-          profile_id: null,
-        };
-        cache.sellers.set(data.data.seller_id, tempSeller);
+      // First try to get seller from the standard endpoint
+      let seller = cache.sellers.get(data.data.seller_id);
+
+      // If not found, try to get from print endpoint
+      if (!seller) {
+        const sellerInfo = await fetchSellerNameFromPrint(dteId);
+        if (sellerInfo) {
+          // Create a temporary seller object with the name
+          seller = {
+            id: data.data.seller_id,
+            first_name: sellerInfo.first_name,
+            last_name: sellerInfo.last_name,
+            role: "unknown",
+            profile_id: null,
+          };
+          cache.sellers.set(data.data.seller_id, seller);
+        }
       }
     }
 
@@ -327,44 +333,77 @@ async function fetchAllUsers(): Promise<Map<number, User>> {
   }
 }
 
-// Fetch all pages of DTEs for a specific date range
 async function fetchAllPages(
   typeDocument: string,
   startDate: string,
-  endDate: string
+  endDate: string,
+  delayBetweenPages: number = 1000 // Default delay of 1 second between pages
 ): Promise<Dte[]> {
   let allData: Dte[] = [];
   let currentPage = 1;
   let totalPages = 1;
+  let consecutiveErrors = 0;
+  const maxConsecutiveErrors = 3; // Stop after 3 consecutive errors
 
   try {
     // First fetch to get total pages
-    const firstResponse = await fetchPage(
-      currentPage,
-      typeDocument,
-      startDate,
-      endDate
-    );
-    allData = allData.concat(firstResponse.data.dtes);
-    totalPages = firstResponse.meta.total_pages;
+    let firstResponse;
+    try {
+      firstResponse = await fetchPageWithRetry(
+        currentPage,
+        typeDocument,
+        startDate,
+        endDate,
+        0 // No delay for first request
+      );
+      allData = allData.concat(firstResponse.data.dtes);
+      totalPages = firstResponse.meta.total_pages;
+      consecutiveErrors = 0; // Reset error counter on success
+    } catch (error) {
+      console.error(
+        `Error fetching first page (${startDate} to ${endDate}):`,
+        error
+      );
+      return []; // Return empty array if first page fails
+    }
 
-    // If there are more pages, fetch them
+    // If there are more pages, fetch them with delays
     if (totalPages > 1) {
-      const remainingPages = Array.from(
-        { length: totalPages - 1 },
-        (_, i) => i + 2
-      );
-      const pagePromises = remainingPages.map((page) =>
-        fetchPage(page, typeDocument, startDate, endDate)
-          .then((response) => response.data.dtes)
-          .catch((error) => {
-            console.error(`Error fetching page ${page}:`, error);
-            return [] as Dte[];
-          })
-      );
+      for (let page = 2; page <= totalPages; page++) {
+        try {
+          // Add delay before each request
+          await new Promise((resolve) =>
+            setTimeout(resolve, delayBetweenPages)
+          );
 
-      const results = await Promise.all(pagePromises);
-      allData = allData.concat(...results);
+          const response = await fetchPageWithRetry(
+            page,
+            typeDocument,
+            startDate,
+            endDate,
+            delayBetweenPages
+          );
+
+          allData = allData.concat(response.data.dtes);
+          consecutiveErrors = 0; // Reset error counter on success
+        } catch (error) {
+          console.error(
+            `Error fetching page ${page} (${startDate} to ${endDate}):`,
+            error
+          );
+          consecutiveErrors++;
+
+          if (consecutiveErrors >= maxConsecutiveErrors) {
+            console.error(
+              `Too many consecutive errors (${maxConsecutiveErrors}). Stopping.`
+            );
+            break;
+          }
+
+          // Increase delay after errors
+          delayBetweenPages = Math.min(delayBetweenPages * 2, 10000); // Max 10 seconds delay
+        }
+      }
     }
 
     return allData;
@@ -377,7 +416,63 @@ async function fetchAllPages(
   }
 }
 
-// Fetch all DTEs with their details for a specific date range
+// Helper function with retry logic
+async function fetchPageWithRetry(
+  page: number,
+  typeDocument: string,
+  startDate: string,
+  endDate: string,
+  delayBeforeRequest: number = 0
+): Promise<DteListResponse> {
+  // Add delay before making the request
+  if (delayBeforeRequest > 0) {
+    await new Promise((resolve) => setTimeout(resolve, delayBeforeRequest));
+  }
+
+  const maxRetries = 3;
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(
+        `${base_url}/dtes?page=${page}&type_document=${typeDocument}&range_date=${startDate} / ${endDate}`,
+        {
+          method: "GET",
+          headers: headers,
+        }
+      );
+
+      if (!response.ok) {
+        if (response.status === 403) {
+          // For 403 errors, wait longer before retrying
+          const delay = Math.pow(2, attempt) * 1000; // Exponential backoff
+          console.warn(
+            `403 Forbidden on attempt ${attempt}. Waiting ${delay}ms before retry...`
+          );
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          continue;
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      lastError = error;
+      console.error(`Attempt ${attempt} failed for page ${page}:`, error);
+
+      if (attempt < maxRetries) {
+        const delay = Math.pow(2, attempt) * 1000; // Exponential backoff
+        console.log(`Waiting ${delay}ms before retry...`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+  }
+
+  console.error(`All ${maxRetries} attempts failed for page ${page}`);
+  throw lastError instanceof Error ? lastError : new Error("Unknown error");
+}
+
+// Update the fetchAllDtesWithDetails function to use the improved fetchAllPages
 async function fetchAllDtesWithDetails(
   typeDocument: string,
   startDate: string,
@@ -403,16 +498,24 @@ async function fetchAllDtesWithDetails(
       fetchAllUsers(),
     ]);
 
-    const dtes = await fetchAllPages(typeDocument, startDate, endDate);
+    // Start with a conservative delay
+    let delayBetweenPages = 1000;
+
+    const dtes = await fetchAllPages(
+      typeDocument,
+      startDate,
+      endDate,
+      delayBetweenPages
+    );
 
     // Fetch details for each DTE with a delay to avoid rate limiting
     const dtesWithDetails = await Promise.all(
       dtes.map(async (dte, index) => {
         try {
           // Add a small delay between requests to avoid rate limiting
-          await new Promise((resolve) => setTimeout(resolve, index * 1000));
+          await new Promise((resolve) => setTimeout(resolve, index * 200));
 
-          // Fetch DTE details (which now includes seller name from print endpoint if needed)
+          // Fetch DTE details
           const details = await fetchDteDetails(dte.id);
 
           // Fetch related data in parallel

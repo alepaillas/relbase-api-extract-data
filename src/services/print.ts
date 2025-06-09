@@ -3,7 +3,7 @@ import { base_url, headers } from "../utils/dotenv.ts";
 
 export async function fetchSellerNameFromPrint(
   dteId: number
-): Promise<string | undefined> {
+): Promise<{ first_name: string; last_name: string } | undefined> {
   try {
     const url = `${base_url}/dtes/${dteId}/imprimir`;
     const response = await fetch(url, {
@@ -21,31 +21,59 @@ export async function fetchSellerNameFromPrint(
 
     const data: PrintResponse = await response.json();
 
-    // Improved regex pattern to extract seller name
-    // This pattern will:
-    // 1. Match "Vendedor:" or "Vendedor: " (with or without space)
-    // 2. Capture everything after it until a newline or HTML tag
-    // 3. Remove any HTML tags and extra whitespace
-    const sellerNameRegex = /Vendedor:\s*<\/b>\s*([^<]+)/i;
+    // More comprehensive patterns to extract seller name
+    const patterns = [
+      // Pattern 1: Vendedor: FirstName LastName
+      /Vendedor:\s*([^\n<]+?)\s+([^\n<]+)/i,
+      // Pattern 2: Vendedor:</b> FirstName LastName
+      /Vendedor:\s*<\/b>\s*([^\n<]+?)\s+([^\n<]+)/i,
+      // Pattern 3: Vendedor: FirstName LastName</b>
+      /Vendedor:\s*([^\n<]+?)\s+([^\n<]+)<\/b>/i,
+      // Pattern 4: Vendedor:</b> FirstName LastName</b>
+      /Vendedor:\s*<\/b>\s*([^\n<]+?)\s+([^\n<]+)<\/b>/i,
+      // Pattern 5: Vendedor: FirstName LastName with possible HTML tags
+      /Vendedor:\s*<[^>]+>\s*([^\n<]+?)\s+([^\n<]+)\s*<\/[^>]+>/i,
+      // Pattern 6: Simple Vendedor: Name
+      /Vendedor:\s*([^\n]+)/i,
+    ];
+
+    // Function to clean up the name by removing HTML tags and extra whitespace
+    const cleanName = (name: string): string => {
+      return name
+        .replace(/<[^>]+>/g, "") // Remove HTML tags
+        .replace(/\[[^\]]+\]/g, "") // Remove [L], [R], [C] tags
+        .replace(/\s+/g, " ") // Replace multiple spaces with single space
+        .trim();
+    };
 
     // Check print_content first
-    for (const content of data.data.print_content) {
-      const match = content.match(sellerNameRegex);
-      if (match && match[1]) {
-        // Clean up the name by removing any remaining HTML tags or extra whitespace
-        return match[1].replace(/<[^>]+>/g, "").trim();
-      }
-    }
-
-    // Alternative pattern for print_content_v2 which might have different formatting
-    const sellerNameRegexV2 = /Vendedor:\s*([^\n]+)/i;
-
-    // If not found in print_content, check print_content_v2
-    for (const content of data.data.print_content_v2) {
-      const match = content.match(sellerNameRegexV2);
-      if (match && match[1]) {
-        // Clean up the name by removing any remaining HTML tags or extra whitespace
-        return match[1].replace(/<[^>]+>/g, "").trim();
+    for (const content of [
+      ...data.data.print_content,
+      ...data.data.print_content_v2,
+    ]) {
+      for (const pattern of patterns) {
+        const match = content.match(pattern);
+        if (match) {
+          // Handle different pattern match groups
+          if (match.length >= 3) {
+            // Patterns that capture first and last name separately
+            const firstName = cleanName(match[1]);
+            const lastName = cleanName(match[2]);
+            return { first_name: firstName, last_name: lastName };
+          } else if (match.length >= 2) {
+            // Patterns that capture full name
+            const fullName = cleanName(match[1]);
+            // Try to split into first and last name
+            const nameParts = fullName.split(/\s+/);
+            if (nameParts.length >= 2) {
+              return {
+                first_name: nameParts[0],
+                last_name: nameParts.slice(1).join(" "),
+              };
+            }
+            return { first_name: fullName, last_name: "" };
+          }
+        }
       }
     }
 
