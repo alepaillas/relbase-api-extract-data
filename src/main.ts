@@ -1,5 +1,3 @@
-import * as dotenv from "dotenv";
-import * as path from "path";
 import * as XLSX from "xlsx";
 import type { Customer, CustomerResponse } from "./types/customer.ts";
 import type { City, CityResponse } from "./types/city.ts";
@@ -17,17 +15,8 @@ import type {
   DteDetailResponse,
   DteListResponse,
 } from "./types/dte.ts";
-
-const envPath = path.resolve(".env");
-dotenv.config({ path: envPath });
-
-// API configuration
-const base_url = `${process.env.BASE_URL}`;
-const headers = {
-  Authorization: `${process.env.USER_TOKEN}`,
-  Company: `${process.env.ENTERPRISE_TOKEN}`,
-  accept: "application/json",
-};
+import { base_url, headers } from "./utils/dotenv.ts";
+import { fetchSellerNameFromPrint } from "./services/print.ts";
 
 // Cache for storing fetched data to avoid duplicate requests
 const cache: {
@@ -59,7 +48,7 @@ function generateDateRanges(): Array<{
     year: number;
     month: number;
   }> = [];
-  const startYear = 2016;
+  const startYear = 2023;
   const endYear = 2025;
 
   for (let year = startYear; year <= endYear; year++) {
@@ -138,6 +127,23 @@ async function fetchDteDetails(dteId: number): Promise<DteDetail | undefined> {
     }
 
     const data: DteDetailResponse = await response.json();
+
+    // If seller_id exists but seller isn't in cache, try to get seller name from print endpoint
+    if (data.data.seller_id && !cache.sellers.has(data.data.seller_id)) {
+      const sellerName = await fetchSellerNameFromPrint(dteId);
+      if (sellerName) {
+        // Create a temporary seller object with just the name
+        const tempSeller: Seller = {
+          id: data.data.seller_id,
+          first_name: sellerName.split(" ")[0] || "",
+          last_name: sellerName.split(" ").slice(1).join(" ") || "",
+          role: null,
+          profile_id: null,
+        };
+        cache.sellers.set(data.data.seller_id, tempSeller);
+      }
+    }
+
     return data.data;
   } catch (error) {
     console.error(`Error fetching details for DTE ${dteId}:`, error);
@@ -404,9 +410,9 @@ async function fetchAllDtesWithDetails(
       dtes.map(async (dte, index) => {
         try {
           // Add a small delay between requests to avoid rate limiting
-          await new Promise((resolve) => setTimeout(resolve, index * 200));
+          await new Promise((resolve) => setTimeout(resolve, index * 1000));
 
-          // Fetch DTE details
+          // Fetch DTE details (which now includes seller name from print endpoint if needed)
           const details = await fetchDteDetails(dte.id);
 
           // Fetch related data in parallel
@@ -827,9 +833,9 @@ async function processAllDateRanges() {
       );
 
       if (data.length > 0) {
-        const fileName = `dtes_type${typeDocument}_${range.year}_${String(
-          range.month
-        ).padStart(2, "0")}.xlsx`;
+        const fileName = `./data/dtes_type${typeDocument}_${
+          range.year
+        }_${String(range.month).padStart(2, "0")}.xlsx`;
         saveToExcel(data, fileName);
         console.log(`Saved ${data.length} records to ${fileName}`);
       } else {
