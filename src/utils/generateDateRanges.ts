@@ -11,7 +11,7 @@ export function generateDateRanges(): Array<{
         year: number;
         month: number;
     }> = [];
-    const startYear = 2023;
+    const startYear = 2016;
     const endYear = 2025;
 
     for (let year = startYear; year <= endYear; year++) {
