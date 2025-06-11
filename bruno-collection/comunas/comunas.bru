@@ -1,0 +1,15 @@
+meta {
+  name: comunas
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{BASE_URL}}/comunas?city_id=232
+  body: none
+  auth: inherit
+}
+
+params:query {
+  city_id: 232
+}

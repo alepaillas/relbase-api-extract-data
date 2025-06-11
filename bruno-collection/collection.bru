@@ -1,0 +1,10 @@
+headers {
+  Authorization: {{USER_TOKEN}}
+  Company: {{ENTERPRISE_TOKEN}}
+}
+
+vars:pre-request {
+  USER_TOKEN: {{process.env.USER_TOKEN}}
+  ENTERPRISE_TOKEN: {{process.env.ENTERPRISE_TOKEN}}
+  BASE_URL: {{process.env.BASE_URL}}
+}

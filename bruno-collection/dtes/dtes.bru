@@ -1,0 +1,16 @@
+meta {
+  name: dtes
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{BASE_URL}}/dtes?type_document=33&range_date=01-01-2025 / 31-01-2025
+  body: none
+  auth: inherit
+}
+
+params:query {
+  type_document: 33
+  range_date: 01-01-2025 / 31-01-2025
+}
