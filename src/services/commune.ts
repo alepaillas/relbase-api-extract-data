@@ -1,6 +1,6 @@
-import { Commune, CommuneResponse } from "../types/commune";
-import { cache } from "../utils/cache";
-import { base_url, headers } from "../utils/dotenv";
+import type { Commune, CommuneResponse } from "../types/commune.ts";
+import { cache } from "../utils/cache.ts";
+import { base_url, headers } from "../utils/dotenv.ts";
 
 // Fetch commune data
 export async function fetchCommune(communeId: number): Promise<Commune | undefined> {

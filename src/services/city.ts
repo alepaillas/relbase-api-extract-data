@@ -1,6 +1,6 @@
-import { City, CityResponse } from "../types/city";
-import { cache } from "../utils/cache";
-import { base_url, headers } from "../utils/dotenv";
+import type { City, CityResponse } from "../types/city.ts";
+import { cache } from "../utils/cache.ts";
+import { base_url, headers } from "../utils/dotenv.ts";
 
 // Fetch city data
 export async function fetchCity(cityId: number): Promise<City | undefined> {

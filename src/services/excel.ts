@@ -1,12 +1,12 @@
 import * as XLSX from "xlsx";
-import { City } from "../types/city";
-import { Commune } from "../types/commune";
-import { Customer } from "../types/customer";
-import { Dte, DteDetail } from "../types/dte";
-import { PaymentType } from "../types/payment_type";
-import { Seller } from "../types/seller";
-import { User } from "../types/user";
-import { cache } from "../utils/cache";
+import type { City } from "../types/city.ts";
+import type { Commune } from "../types/commune.ts";
+import type { Customer } from "../types/customer.ts";
+import type { Dte, DteDetail } from "../types/dte.ts";
+import type { PaymentType } from "../types/payment_type.ts";
+import type { Seller } from "../types/seller.ts";
+import type { User } from "../types/user.ts";
+import { cache } from "../utils/cache.ts";
 
 // Save data to Excel with multiple sheets
 export function saveToExcel(

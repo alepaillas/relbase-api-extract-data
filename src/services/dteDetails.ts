@@ -1,7 +1,7 @@
-import { DteDetail, DteDetailResponse } from "../types/dte";
-import { cache } from "../utils/cache";
-import { base_url, headers } from "../utils/dotenv";
-import { fetchSellerNameFromPrint } from "./print";
+import type { DteDetail, DteDetailResponse } from "../types/dte.ts";
+import { cache } from "../utils/cache.ts";
+import { base_url, headers } from "../utils/dotenv.ts";
+import { fetchSellerNameFromPrint } from "./print.ts";
 
 // Fetch details for a specific DTE
 export async function fetchDteDetails(dteId: number): Promise<DteDetail | undefined> {

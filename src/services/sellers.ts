@@ -1,6 +1,6 @@
-import { Seller, SellersResponse } from "../types/seller";
-import { cache } from "../utils/cache";
-import { base_url, headers } from "../utils/dotenv";
+import type { Seller, SellersResponse } from "../types/seller.ts";
+import { cache } from "../utils/cache.ts";
+import { base_url, headers } from "../utils/dotenv.ts";
 
 // Fetch all sellers
 export async function fetchAllSellers(): Promise<Map<number, Seller>> {

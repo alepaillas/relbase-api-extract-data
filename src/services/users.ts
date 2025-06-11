@@ -1,6 +1,6 @@
-import { User, UsersResponse } from "../types/user";
-import { cache } from "../utils/cache";
-import { base_url, headers } from "../utils/dotenv";
+import type { User, UsersResponse } from "../types/user.ts";
+import { cache } from "../utils/cache.ts";
+import { base_url, headers } from "../utils/dotenv.ts";
 
 // Fetch all users
 export async function fetchAllUsers(): Promise<Map<number, User>> {

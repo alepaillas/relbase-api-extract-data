@@ -1,6 +1,6 @@
-import { PaymentType, PaymentTypesResponse } from "../types/payment_type";
-import { cache } from "../utils/cache";
-import { base_url, headers } from "../utils/dotenv";
+import type { PaymentType, PaymentTypesResponse } from "../types/payment_type.ts";
+import { cache } from "../utils/cache.ts";
+import { base_url, headers } from "../utils/dotenv.ts";
 
 // Fetch all payment types
 export async function fetchAllPaymentTypes(): Promise<Map<number, PaymentType>> {

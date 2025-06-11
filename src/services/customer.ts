@@ -1,6 +1,6 @@
-import { Customer, CustomerResponse } from "../types/customer";
-import { cache } from "../utils/cache";
-import { base_url, headers } from "../utils/dotenv";
+import type { Customer, CustomerResponse } from "../types/customer.ts";
+import { cache } from "../utils/cache.ts";
+import { base_url, headers } from "../utils/dotenv.ts";
 
 // Fetch customer data
 export async function fetchCustomer(
