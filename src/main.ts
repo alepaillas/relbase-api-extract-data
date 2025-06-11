@@ -22,17 +22,73 @@ import { cache } from "./utils/cache.ts";
 const MAX_REQUESTS_PER_SECOND = 7;
 const REQUEST_INTERVAL = 1000 / MAX_REQUESTS_PER_SECOND;
 let lastRequestTime = 0;
+let consecutiveErrors = 0;
+const MAX_CONSECUTIVE_ERRORS = 5;
+
+// Track request timings for debugging
+const requestTimings: number[] = [];
 
 // Ensure minimum delay between requests
 async function enforceRateLimit() {
   const now = Date.now();
   const timeSinceLastRequest = now - lastRequestTime;
-  if (timeSinceLastRequest < REQUEST_INTERVAL) {
-    const delay = REQUEST_INTERVAL - timeSinceLastRequest;
-    console.log(`Rate limiting: Waiting ${delay}ms before next request...`);
+
+  // If we're getting many errors, slow down more aggressively
+  const dynamicInterval = consecutiveErrors > 3
+    ? REQUEST_INTERVAL * 2
+    : REQUEST_INTERVAL;
+
+  if (timeSinceLastRequest < dynamicInterval) {
+    const delay = dynamicInterval - timeSinceLastRequest;
+    console.log(`[${new Date().toISOString()}] Rate limiting: Waiting ${delay.toFixed(2)}ms before next request...`);
     await new Promise(resolve => setTimeout(resolve, delay));
   }
+
+  // Track request timing
+  if (lastRequestTime > 0) {
+    requestTimings.push(timeSinceLastRequest);
+    if (requestTimings.length > 100) {
+      requestTimings.shift();
+    }
+  }
+
   lastRequestTime = Date.now();
+}
+
+// Improved error handling wrapper
+async function safeFetch<T>(
+  id: number | null | undefined,
+  fetchFn: (id: number) => Promise<T | undefined>,
+  type: string,
+  idName: string
+): Promise<T | undefined> {
+  if (id === null || id === undefined) {
+    console.log(`[${new Date().toISOString()}] No ${type} ${idName} found (ID: ${id})`);
+    return undefined;
+  }
+
+  try {
+    const startTime = Date.now();
+    await enforceRateLimit();
+    const result = await fetchFn(id);
+    const duration = Date.now() - startTime;
+
+    console.log(`[${new Date().toISOString()}] Fetched ${type} ${idName} ${id} in ${duration}ms`);
+    consecutiveErrors = Math.max(0, consecutiveErrors - 0.5); // Reduce error count on success
+    return result;
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] Error fetching ${type} ${idName} ${id}:`, error);
+    consecutiveErrors++;
+
+    // If we're getting too many errors, slow down more
+    if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+      console.warn(`[${new Date().toISOString()}] Too many consecutive errors (${consecutiveErrors}). Pausing for 5 seconds...`);
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      consecutiveErrors = 0; // Reset after pause
+    }
+
+    return undefined;
+  }
 }
 
 // Fetch a single page of DTEs with rate limiting
@@ -184,6 +240,7 @@ async function fetchPageWithRetry(
   throw lastError instanceof Error ? lastError : new Error("Unknown error");
 }
 
+
 // Define a type for the extended DTE with all possible relations
 type ExtendedDte = Dte & {
   details?: DteDetail;
@@ -194,6 +251,11 @@ type ExtendedDte = Dte & {
   payment_type?: PaymentType;
   user?: User;
 };
+
+// Helper function to safely filter out undefined values
+function filterUndefined<T>(value: T | undefined): value is T {
+  return value !== undefined;
+}
 
 async function fetchAllDtesWithDetails(
   typeDocument: string,
@@ -217,79 +279,65 @@ async function fetchAllDtesWithDetails(
     const dtes = await fetchAllPages(typeDocument, startDate, endDate);
     console.log(`[${new Date().toISOString()}] Found ${dtes.length} DTEs to process`);
 
-    // Fetch details for each DTE with rate limiting
-    const dtesWithDetails: Array<ExtendedDte | undefined> = await Promise.all(
-      dtes.map(async (dte, index) => {
-        try {
-          console.log(`[${new Date().toISOString()}] Processing DTE ${index + 1}/${dtes.length} (ID: ${dte.id})`);
+    // Process DTEs in batches to avoid memory issues
+    const BATCH_SIZE = 20;
+    const dtesWithDetails: ExtendedDte[] = [];
 
-          // Fetch DTE details
-          const detailsStart = Date.now();
-          const details = await fetchDteDetails(dte.id);
-          const detailsDuration = Date.now() - detailsStart;
-          console.log(`[${new Date().toISOString()}] Fetched details for DTE ${dte.id} in ${detailsDuration}ms`);
+    for (let i = 0; i < dtes.length; i += BATCH_SIZE) {
+      const batch = dtes.slice(i, i + BATCH_SIZE);
+      console.log(`[${new Date().toISOString()}] Processing batch ${i / BATCH_SIZE + 1} of ${Math.ceil(dtes.length / BATCH_SIZE)} (DTEs ${i + 1}-${i + batch.length})`);
 
-          // Helper function to safely fetch related data
-          const fetchRelatedData = async <T>(
-            id: number | null | undefined,
-            fetchFn: (id: number) => Promise<T | undefined>,
-            type: string
-          ): Promise<T | undefined> => {
-            if (id === null || id === undefined) {
-              console.log(`[${new Date().toISOString()}] No ${type} ID found for DTE ${dte.id}`);
-              return undefined;
-            }
-            console.log(`[${new Date().toISOString()}] Fetching ${type} for ID ${id}...`);
-            const start = Date.now();
-            await enforceRateLimit();
-            const result = await fetchFn(id);
-            const duration = Date.now() - start;
-            console.log(`[${new Date().toISOString()}] Fetched ${type} in ${duration}ms`);
-            return result;
-          };
+      const batchResults = await Promise.all(
+        batch.map(async (dte) => {
+          try {
+            console.log(`[${new Date().toISOString()}] Processing DTE ${dte.id} (${i + batch.indexOf(dte) + 1}/${dtes.length})`);
 
-          // Fetch related data in parallel with proper null checks
-          const [customer, city, commune] = await Promise.all([
-            fetchRelatedData(dte.customer_id, fetchCustomer, 'customer'),
-            fetchRelatedData(dte.city_id, fetchCity, 'city'),
-            fetchRelatedData(dte.commune_id, fetchCommune, 'commune'),
-          ]);
+            // Fetch DTE details
+            const detailsStart = Date.now();
+            const details = await safeFetch(dte.id, fetchDteDetails, 'DTE details', 'DTE');
+            const detailsDuration = Date.now() - detailsStart;
+            console.log(`[${new Date().toISOString()}] Fetched details for DTE ${dte.id} in ${detailsDuration}ms`);
 
-          // Get cached data
-          const seller = dte.seller_id ? cache.sellers.get(dte.seller_id) : undefined;
-          const paymentType = dte.type_payment_id ? cache.paymentTypes.get(dte.type_payment_id) : undefined;
-          const user = dte.user_id ? cache.users.get(dte.user_id) : undefined;
+            // Fetch related data in parallel
+            const [customer, city, commune] = await Promise.all([
+              safeFetch(dte.customer_id, fetchCustomer, 'customer', 'customer'),
+              safeFetch(dte.city_id, fetchCity, 'city', 'city'),
+              safeFetch(dte.commune_id, fetchCommune, 'commune', 'commune'),
+            ]);
 
-          console.log(`[${new Date().toISOString()}] Completed processing DTE ${dte.id}`);
-          return {
-            ...dte,
-            details,
-            customer,
-            city,
-            commune,
-            seller,
-            payment_type: paymentType,
-            user,
-          };
-        } catch (error) {
-          console.error(`[${new Date().toISOString()}] Error fetching details for DTE ${dte.id}:`, error);
-          return {
-            ...dte,
-            details: undefined,
-            customer: undefined,
-            city: undefined,
-            commune: undefined,
-            seller: undefined,
-            payment_type: undefined,
-            user: undefined,
-          };
-        }
-      })
-    );
+            // Get cached data
+            const seller = dte.seller_id ? cache.sellers.get(dte.seller_id) : undefined;
+            const paymentType = dte.type_payment_id ? cache.paymentTypes.get(dte.type_payment_id) : undefined;
+            const user = dte.user_id ? cache.users.get(dte.user_id) : undefined;
 
-    const validDtes = dtesWithDetails.filter((dte): dte is ExtendedDte => dte !== undefined);
-    console.log(`[${new Date().toISOString()}] Completed processing all DTEs. ${validDtes.length} DTEs processed successfully.`);
-    return validDtes;
+            // Create the extended DTE object
+            const extendedDte: ExtendedDte = {
+              ...dte,
+              details,
+              customer,
+              city,
+              commune,
+              seller,
+              payment_type: paymentType,
+              user,
+            };
+
+            return extendedDte;
+          } catch (error) {
+            console.error(`[${new Date().toISOString()}] Error processing DTE ${dte.id}:`, error);
+            return undefined;
+          }
+        })
+      );
+
+      // Filter out undefined results and add to final array
+      const validBatch = batchResults.filter(filterUndefined);
+      dtesWithDetails.push(...validBatch);
+      console.log(`[${new Date().toISOString()}] Completed batch ${i / BATCH_SIZE + 1} - ${validBatch.length} successful, ${batch.length - validBatch.length} failed`);
+    }
+
+    console.log(`[${new Date().toISOString()}] Completed processing all DTEs. ${dtesWithDetails.length} DTEs processed successfully.`);
+    return dtesWithDetails;
   } catch (error) {
     console.error(`[${new Date().toISOString()}] Error in fetchAllDtesWithDetails (${startDate} to ${endDate}):`, error);
     return [];
