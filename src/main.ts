@@ -25,6 +25,7 @@ import { fetchDteDetails } from "./services/dteDetails.ts"
 import { fetchAllPaymentTypes } from "./services/paymentTypes.ts"
 import { fetchAllSellers } from "./services/sellers.ts"
 import { fetchAllUsers } from "./services/users.ts"
+import { fetchCity } from "./services/city.ts"
 import { cache } from "./utils/cache.ts";
 
 // Fetch a single page of DTEs
@@ -239,7 +240,7 @@ async function fetchAllDtesWithDetails(
       dtes.map(async (dte, index) => {
         try {
           // Add a small delay between requests to avoid rate limiting
-          await new Promise((resolve) => setTimeout(resolve, index * 200));
+          await new Promise((resolve) => setTimeout(resolve, index * 1000));
 
           // Fetch DTE details
           const details = await fetchDteDetails(dte.id);
@@ -359,7 +360,4 @@ async function processAllDateRanges() {
 processAllDateRanges().catch((error) => {
   console.error("Error in processAllDateRanges:", error);
 });
-function fetchCity(city_id: number): any {
-  throw new Error("Function not implemented.");
-}
 
