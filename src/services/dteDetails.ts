@@ -3,7 +3,7 @@ import { cache } from "../utils/cache.ts";
 import { base_url, headers } from "../utils/dotenv.ts";
 import { fetchSellerNameFromPrint } from "./print.ts";
 
-// Fetch details for a specific DTE
+// Fetch details for a specific DTE - let safeFetch handle error logging
 export async function fetchDteDetails(dteId: number): Promise<DteDetail | undefined> {
     try {
         const url = `${base_url}/dtes/${dteId}`;
@@ -14,9 +14,11 @@ export async function fetchDteDetails(dteId: number): Promise<DteDetail | undefi
 
         if (!response.ok) {
             if (response.status === 404) {
-                console.warn(`DTE ${dteId} not found`);
+                // 404 is expected for some DTEs, so we can log this quietly
+                console.log(`DTE ${dteId} not found (404)`);
                 return undefined;
             }
+            // Don't log other errors here - let safeFetch handle it
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 
@@ -46,7 +48,7 @@ export async function fetchDteDetails(dteId: number): Promise<DteDetail | undefi
 
         return data.data;
     } catch (error) {
-        console.error(`Error fetching details for DTE ${dteId}:`, error);
-        return undefined;
+        // Don't log errors here - let safeFetch handle retries and logging
+        throw error; // Re-throw so safeFetch can handle it
     }
 }

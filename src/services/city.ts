@@ -2,8 +2,9 @@ import type { City, CityResponse } from "../types/city.ts";
 import { cache } from "../utils/cache.ts";
 import { base_url, headers } from "../utils/dotenv.ts";
 
-// Fetch city data
+// Updated fetchCity function - let safeFetch handle error logging
 export async function fetchCity(cityId: number): Promise<City | undefined> {
+    // Check cache first
     if (cache.cities.has(cityId)) {
         return cache.cities.get(cityId);
     }
@@ -17,9 +18,11 @@ export async function fetchCity(cityId: number): Promise<City | undefined> {
 
         if (!response.ok) {
             if (response.status === 404) {
-                console.warn(`City ${cityId} not found`);
+                // 404 is expected for some cities, so we can log this quietly
+                console.log(`City ${cityId} not found (404)`);
                 return undefined;
             }
+            // Don't log other errors here - let safeFetch handle it
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 
@@ -27,7 +30,7 @@ export async function fetchCity(cityId: number): Promise<City | undefined> {
         cache.cities.set(cityId, data.data);
         return data.data;
     } catch (error) {
-        console.error(`Error fetching city ${cityId}:`, error);
-        return undefined;
+        // Don't log errors here - let safeFetch handle retries and logging
+        throw error; // Re-throw so safeFetch can handle it
     }
 }

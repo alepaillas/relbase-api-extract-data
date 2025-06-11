@@ -73,7 +73,7 @@ const requestStats: RequestStats = {
   dataLoss: 0
 };
 
-// Enhanced error handling wrapper with better logging
+// Enhanced error handling wrapper with corrected 403 detection and retry logic
 async function safeFetch<T>(
   id: number | null | undefined,
   fetchFn: (id: number) => Promise<T | undefined>,
@@ -87,14 +87,10 @@ async function safeFetch<T>(
     return undefined;
   }
 
-  let attempt = 0;
   const maxAttempts = 3;
   let lastError: unknown;
 
-  while (attempt < maxAttempts) {
-    attempt++;
-    requestStats.total++;
-
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       await enforceRateLimit();
       console.log(`[${new Date().toISOString()}] Attempt ${attempt} to fetch ${type} ${idName} ${idValue}`);
@@ -110,31 +106,41 @@ async function safeFetch<T>(
       return result;
     } catch (error: any) {
       lastError = error;
+      console.error(`Error fetching ${type} ${id}:`, error);
 
-      if (error.message.includes('403')) {
+      // Check for 403 status in multiple ways
+      const is403Error = error.message?.includes('403') ||
+        error.message?.includes('status: 403') ||
+        error.status === 403 ||
+        error.response?.status === 403;
+
+      if (is403Error) {
         requestStats.rateLimited++;
         console.warn(`[${new Date().toISOString()}] RATE LIMITED (403): ${type} ${idName} ${idValue} (attempt ${attempt})`);
-
-        if (attempt < maxAttempts) {
-          requestStats.retries++;
-          const delay = Math.pow(2, attempt) * 1000;
-          console.log(`[${new Date().toISOString()}] Will retry in ${delay}ms...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-        } else {
-          requestStats.failedAfterRetries++;
-          console.error(`[${new Date().toISOString()}] FAILED AFTER RETRIES: ${type} ${idName} ${idValue}`);
-          if (isCritical) requestStats.dataLoss++;
-          return undefined;
-        }
       } else {
         requestStats.otherErrors++;
-        console.error(`[${new Date().toISOString()}] ERROR: ${type} ${idName} ${idValue}:`, error.message);
+        console.error(`[${new Date().toISOString()}] OTHER ERROR: ${type} ${idName} ${idValue} (attempt ${attempt}):`, error.message);
+      }
+
+      // Retry logic for both 403 and other errors (if not last attempt)
+      if (attempt < maxAttempts) {
+        requestStats.retries++;
+        const delay = Math.pow(2, attempt) * 1000; // Exponential backoff
+        console.log(`[${new Date().toISOString()}] Will retry in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue; // Continue to next iteration
+      } else {
+        // Final attempt failed
+        requestStats.failedAfterRetries++;
+        console.error(`[${new Date().toISOString()}] FAILED AFTER ${maxAttempts} RETRIES: ${type} ${idName} ${idValue}`);
+        if (isCritical) requestStats.dataLoss++;
         return undefined;
       }
     }
   }
 
-  console.error(`[${new Date().toISOString()}] MAX ATTEMPTS REACHED: Failed to fetch ${type} ${idName} ${idValue} after ${maxAttempts} attempts`);
+  // This should never be reached due to the loop structure above, but just in case
+  console.error(`[${new Date().toISOString()}] UNEXPECTED: Reached end of safeFetch without returning`);
   if (isCritical) requestStats.dataLoss++;
   return undefined;
 }

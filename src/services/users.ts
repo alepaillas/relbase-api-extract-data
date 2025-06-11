@@ -2,7 +2,7 @@ import type { User, UsersResponse } from "../types/user.ts";
 import { cache } from "../utils/cache.ts";
 import { base_url, headers } from "../utils/dotenv.ts";
 
-// Fetch all users
+// Fetch all users - let safeFetch handle error logging
 export async function fetchAllUsers(): Promise<Map<number, User>> {
     if (cache.users.size > 0) {
         return cache.users;
@@ -16,6 +16,7 @@ export async function fetchAllUsers(): Promise<Map<number, User>> {
         });
 
         if (!response.ok) {
+            // Don't log other errors here - let safeFetch handle it
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 
@@ -23,9 +24,10 @@ export async function fetchAllUsers(): Promise<Map<number, User>> {
         data.data.users.forEach((user) => {
             cache.users.set(user.id, user);
         });
+
         return cache.users;
     } catch (error) {
-        console.error("Error fetching all users:", error);
-        return cache.users;
+        // Don't log errors here - let safeFetch handle retries and logging
+        throw error; // Re-throw so safeFetch can handle it
     }
 }

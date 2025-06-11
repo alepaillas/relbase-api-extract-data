@@ -1,6 +1,7 @@
 import type { PrintResponse } from "../types/print_response.ts";
 import { base_url, headers } from "../utils/dotenv.ts";
 
+// Fetch seller name from print endpoint - let safeFetch handle error logging
 export async function fetchSellerNameFromPrint(
   dteId: number
 ): Promise<{ first_name: string; last_name: string } | undefined> {
@@ -13,9 +14,11 @@ export async function fetchSellerNameFromPrint(
 
     if (!response.ok) {
       if (response.status === 404) {
-        console.warn(`Print data for DTE ${dteId} not found`);
+        // 404 is expected for some print data, so we can log this quietly
+        console.log(`Print data for DTE ${dteId} not found (404)`);
         return undefined;
       }
+      // Don't log other errors here - let safeFetch handle it
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
@@ -77,13 +80,10 @@ export async function fetchSellerNameFromPrint(
       }
     }
 
-    console.warn(`No seller name found in print data for DTE ${dteId}`);
+    console.log(`No seller name found in print data for DTE ${dteId}`);
     return undefined;
   } catch (error) {
-    console.error(
-      `Error fetching seller name from print endpoint for DTE ${dteId}:`,
-      error
-    );
-    return undefined;
+    // Don't log errors here - let safeFetch handle retries and logging
+    throw error; // Re-throw so safeFetch can handle it
   }
 }

@@ -2,10 +2,8 @@ import type { Customer, CustomerResponse } from "../types/customer.ts";
 import { cache } from "../utils/cache.ts";
 import { base_url, headers } from "../utils/dotenv.ts";
 
-// Fetch customer data
-export async function fetchCustomer(
-    customerId: number
-): Promise<Customer | undefined> {
+// Updated fetchCustomer function
+export async function fetchCustomer(customerId: number): Promise<Customer | undefined> {
     if (cache.customers.has(customerId)) {
         return cache.customers.get(customerId);
     }
@@ -19,7 +17,7 @@ export async function fetchCustomer(
 
         if (!response.ok) {
             if (response.status === 404) {
-                console.warn(`Customer ${customerId} not found`);
+                console.log(`Customer ${customerId} not found (404)`);
                 return undefined;
             }
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -29,7 +27,6 @@ export async function fetchCustomer(
         cache.customers.set(customerId, data.data);
         return data.data;
     } catch (error) {
-        console.error(`Error fetching customer ${customerId}:`, error);
-        return undefined;
+        throw error; // Let safeFetch handle it
     }
 }

@@ -2,7 +2,6 @@ import type { Commune, CommuneResponse } from "../types/commune.ts";
 import { cache } from "../utils/cache.ts";
 import { base_url, headers } from "../utils/dotenv.ts";
 
-// Fetch commune data
 export async function fetchCommune(communeId: number): Promise<Commune | undefined> {
     if (cache.communes.has(communeId)) {
         return cache.communes.get(communeId);
@@ -17,7 +16,7 @@ export async function fetchCommune(communeId: number): Promise<Commune | undefin
 
         if (!response.ok) {
             if (response.status === 404) {
-                console.warn(`Commune ${communeId} not found`);
+                console.log(`Commune ${communeId} not found (404)`);
                 return undefined;
             }
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -27,7 +26,6 @@ export async function fetchCommune(communeId: number): Promise<Commune | undefin
         cache.communes.set(communeId, data.data);
         return data.data;
     } catch (error) {
-        console.error(`Error fetching commune ${communeId}:`, error);
-        return undefined;
+        throw error; // Let safeFetch handle it
     }
 }

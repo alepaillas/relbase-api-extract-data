@@ -2,7 +2,7 @@ import type { PaymentType, PaymentTypesResponse } from "../types/payment_type.ts
 import { cache } from "../utils/cache.ts";
 import { base_url, headers } from "../utils/dotenv.ts";
 
-// Fetch all payment types
+// Fetch all payment types - let safeFetch handle error logging
 export async function fetchAllPaymentTypes(): Promise<Map<number, PaymentType>> {
     if (cache.paymentTypes.size > 0) {
         return cache.paymentTypes;
@@ -16,6 +16,7 @@ export async function fetchAllPaymentTypes(): Promise<Map<number, PaymentType>> 
         });
 
         if (!response.ok) {
+            // Don't log other errors here - let safeFetch handle it
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 
@@ -23,9 +24,10 @@ export async function fetchAllPaymentTypes(): Promise<Map<number, PaymentType>> 
         data.data.type_payments.forEach((paymentType) => {
             cache.paymentTypes.set(paymentType.id, paymentType);
         });
+
         return cache.paymentTypes;
     } catch (error) {
-        console.error("Error fetching all payment types:", error);
-        return cache.paymentTypes;
+        // Don't log errors here - let safeFetch handle retries and logging
+        throw error; // Re-throw so safeFetch can handle it
     }
 }
