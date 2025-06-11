@@ -1,0 +1,31 @@
+import { PaymentType, PaymentTypesResponse } from "../types/payment_type";
+import { cache } from "../utils/cache";
+import { base_url, headers } from "../utils/dotenv";
+
+// Fetch all payment types
+export async function fetchAllPaymentTypes(): Promise<Map<number, PaymentType>> {
+    if (cache.paymentTypes.size > 0) {
+        return cache.paymentTypes;
+    }
+
+    try {
+        const url = `${base_url}/forma_pagos`;
+        const response = await fetch(url, {
+            method: "GET",
+            headers: headers,
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data: PaymentTypesResponse = await response.json();
+        data.data.type_payments.forEach((paymentType) => {
+            cache.paymentTypes.set(paymentType.id, paymentType);
+        });
+        return cache.paymentTypes;
+    } catch (error) {
+        console.error("Error fetching all payment types:", error);
+        return cache.paymentTypes;
+    }
+}
