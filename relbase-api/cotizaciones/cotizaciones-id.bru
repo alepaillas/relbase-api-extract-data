@@ -5,7 +5,11 @@ meta {
 }
 
 get {
-  url: {{BASE_URL}}/cotizaciones
+  url: {{BASE_URL}}/cotizaciones/:id
   body: none
   auth: inherit
+}
+
+params:path {
+  id: 1644490
 }
