@@ -9,6 +9,7 @@ import type { PaymentType } from "../types/payment_type.ts";
 import type { Seller } from "../types/seller.ts";
 import type { User } from "../types/user.ts";
 import { cache } from "../utils/cache.ts";
+import type { Reference } from "../types/reference.ts";
 
 // Ensure the data directory exists
 function ensureDataDirectory() {
@@ -30,6 +31,7 @@ export function saveToExcel(
             seller?: Seller;
             payment_type?: PaymentType;
             user?: User;
+            references?: Reference[];
         }
     >,
     fileName: string
@@ -391,7 +393,7 @@ export function saveToExcel(
                 rut_otr: reference.rut_otr || '',
                 company_id: reference.company_id,
                 business_id: reference.business_id,
-                reference_name: cache.references.get(reference.tpo_doc_ref_id)?.name || 'Unknown'
+                reference_name: cache.references.get(reference.tpo_doc_ref_id)?.name || ''
             }))
         );
 

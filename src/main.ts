@@ -304,7 +304,6 @@ async function fetchPageWithRetry(
   throw lastError instanceof Error ? lastError : new Error("Unknown error");
 }
 
-
 // Define a type for the extended DTE with all possible relations
 type ExtendedDte = Dte & {
   details?: DteDetail;
@@ -348,7 +347,15 @@ async function fetchAllDtesWithDetails(
       safeFetch(null, fetchAllSellers, 'sellers', 'reference data', 'all', false),
       safeFetch(null, fetchAllPaymentTypes, 'payment types', 'reference data', 'all', false),
       safeFetch(null, fetchAllUsers, 'users', 'reference data', 'all', false),
-      safeFetch(null, fetchAllReferences, 'references', 'reference data', 'all', false)
+      (async () => {
+        try {
+          console.log(`[${new Date().toISOString()}] Fetching all references...`);
+          await fetchAllReferences();
+          console.log(`[${new Date().toISOString()}] Successfully loaded ${cache.references.size} references`);
+        } catch (error) {
+          console.error(`[${new Date().toISOString()}] Failed to load references:`, error);
+        }
+      })()
     ]);
     const duration = Date.now() - startTime;
     console.log(`[${new Date().toISOString()}] Reference data pre-fetched in ${duration}ms`);

@@ -9,7 +9,7 @@ export async function fetchAllReferences(): Promise<Map<number, Reference>> {
     }
 
     try {
-        const url = `${base_url}/references`;
+        const url = `${base_url}/referencias`;
         console.log(`[${new Date().toISOString()}] Fetching all references from ${url}`);
         const response = await fetch(url, {
             method: "GET",
