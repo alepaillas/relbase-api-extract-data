@@ -10,3 +10,13 @@ export interface CityResponse {
   data: City;
   meta: Meta;
 }
+
+export interface AllCitiesResponse {
+  data: {
+    cities: City[];
+  };
+  meta: {
+    code: number;
+    message: string;
+  };
+}

@@ -1,6 +1,7 @@
 import type { City } from "../types/city.ts";
 import type { Commune } from "../types/commune.ts";
 import type { Customer } from "../types/customer.ts";
+import type { Estimate } from "../types/estimate.ts";
 import type { PaymentType } from "../types/payment_type.ts";
 import type { Reference } from "../types/reference.ts";
 import type { Seller } from "../types/seller.ts";
@@ -15,6 +16,7 @@ export const cache: {
     paymentTypes: Map<number, PaymentType>;
     users: Map<number, User>;
     references: Map<number, Reference>;
+    estimates: Map<number, Estimate>,
 } = {
     customers: new Map(),
     cities: new Map(),
@@ -23,4 +25,5 @@ export const cache: {
     paymentTypes: new Map(),
     users: new Map(),
     references: new Map(),
+    estimates: new Map(),
 };

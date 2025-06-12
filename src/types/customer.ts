@@ -37,3 +37,13 @@ export interface CustomerResponse {
   data: Customer;
   meta: Meta;
 }
+
+export interface AllCustomersResponse {
+  data: {
+    customers: Customer[];
+  };
+  meta: {
+    code: number;
+    message: string;
+  };
+}
