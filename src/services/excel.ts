@@ -13,7 +13,7 @@ import type { Reference } from "../types/reference.ts";
 
 // Ensure the data directory exists
 function ensureDataDirectory() {
-    const dir = './data';
+    const dir = './data/dtes';
     if (!fs.existsSync(dir)) {
         console.log(`Creating directory: ${dir}`);
         fs.mkdirSync(dir, { recursive: true });

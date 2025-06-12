@@ -23,7 +23,7 @@ import * as fs from "fs";
 
 // Ensure the data directory exists
 function ensureDataDirectory() {
-    const dir = './data';
+    const dir = './data/estimates';
     if (!fs.existsSync(dir)) {
         console.log(`Creating directory: ${dir}`);
         fs.mkdirSync(dir, { recursive: true });
@@ -339,12 +339,66 @@ async function fetchAllEstimatesWithDetails(
         console.log(`[${new Date().toISOString()}] Pre-fetching reference data...`);
         const startTime = Date.now();
         await Promise.all([
-            safeFetch(null, fetchAllSellers, 'sellers', 'reference data', 'all', false),
-            safeFetch(null, fetchAllPaymentTypes, 'payment types', 'reference data', 'all', false),
-            safeFetch(null, fetchAllUsers, 'users', 'reference data', 'all', false),
-            safeFetch(null, fetchAllCustomers, 'customers', 'reference data', 'all', false),
-            safeFetch(null, fetchAllCities, 'cities', 'reference data', 'all', false),
-            safeFetch(null, fetchAllCommunes, 'communes', 'reference data', 'all', false),
+            // safeFetch(null, fetchAllSellers, 'sellers', 'reference data', 'all', false),
+            (async () => {
+                try {
+                    console.log(`[${new Date().toISOString()}] Fetching all sellers...`);
+                    await fetchAllSellers();
+                    console.log(`[${new Date().toISOString()}] Successfully loaded ${cache.sellers.size} sellers`);
+                } catch (error) {
+                    console.error(`[${new Date().toISOString()}] Failed to load sellers:`, error);
+                }
+            })(),
+            // safeFetch(null, fetchAllPaymentTypes, 'payment types', 'reference data', 'all', false),
+            (async () => {
+                try {
+                    console.log(`[${new Date().toISOString()}] Fetching all paymentTypes...`);
+                    await fetchAllPaymentTypes();
+                    console.log(`[${new Date().toISOString()}] Successfully loaded ${cache.paymentTypes.size} paymentTypes`);
+                } catch (error) {
+                    console.error(`[${new Date().toISOString()}] Failed to load paymentTypes:`, error);
+                }
+            })(),
+            // safeFetch(null, fetchAllUsers, 'users', 'reference data', 'all', false),
+            (async () => {
+                try {
+                    console.log(`[${new Date().toISOString()}] Fetching all users...`);
+                    await fetchAllUsers();
+                    console.log(`[${new Date().toISOString()}] Successfully loaded ${cache.users.size} users`);
+                } catch (error) {
+                    console.error(`[${new Date().toISOString()}] Failed to load users:`, error);
+                }
+            })(),
+            // safeFetch(null, fetchAllCustomers, 'customers', 'reference data', 'all', false),
+            (async () => {
+                try {
+                    console.log(`[${new Date().toISOString()}] Fetching all customers...`);
+                    await fetchAllCustomers();
+                    console.log(`[${new Date().toISOString()}] Successfully loaded ${cache.customers.size} customers`);
+                } catch (error) {
+                    console.error(`[${new Date().toISOString()}] Failed to load customers:`, error);
+                }
+            })(),
+            // safeFetch(null, fetchAllCities, 'cities', 'reference data', 'all', false),
+            (async () => {
+                try {
+                    console.log(`[${new Date().toISOString()}] Fetching all cities...`);
+                    await fetchAllCities();
+                    console.log(`[${new Date().toISOString()}] Successfully loaded ${cache.cities.size} cities`);
+                } catch (error) {
+                    console.error(`[${new Date().toISOString()}] Failed to load cities:`, error);
+                }
+            })(),
+            // safeFetch(null, fetchAllCommunes, 'communes', 'reference data', 'all', false),
+            (async () => {
+                try {
+                    console.log(`[${new Date().toISOString()}] Fetching all communes...`);
+                    await fetchAllCommunes();
+                    console.log(`[${new Date().toISOString()}] Successfully loaded ${cache.communes.size} communes`);
+                } catch (error) {
+                    console.error(`[${new Date().toISOString()}] Failed to load communes:`, error);
+                }
+            })(),
             (async () => {
                 try {
                     console.log(`[${new Date().toISOString()}] Fetching all estimates...`);
@@ -467,7 +521,7 @@ async function processAllEstimateDateRanges() {
             const duration = Date.now() - startTime;
 
             if (data.length > 0) {
-                const fileName = `./data/estimates_${range.year}_${String(range.month).padStart(2, "0")}.xlsx`;
+                const fileName = `./data/estimates/estimates_${range.year}_${String(range.month).padStart(2, "0")}.xlsx`;
                 console.log(`[${new Date().toISOString()}] Saving ${data.length} estimate records to ${fileName}`);
                 saveEstimatesToExcel(data, fileName);
                 console.log(`[${new Date().toISOString()}] Successfully saved estimate data to ${fileName} in ${duration}ms`);

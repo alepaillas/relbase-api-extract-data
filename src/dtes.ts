@@ -344,9 +344,36 @@ async function fetchAllDtesWithDetails(
     console.log(`[${new Date().toISOString()}] Pre-fetching reference data...`);
     const startTime = Date.now();
     await Promise.all([
-      safeFetch(null, fetchAllSellers, 'sellers', 'reference data', 'all', false),
-      safeFetch(null, fetchAllPaymentTypes, 'payment types', 'reference data', 'all', false),
-      safeFetch(null, fetchAllUsers, 'users', 'reference data', 'all', false),
+      // safeFetch(null, fetchAllSellers, 'sellers', 'reference data', 'all', false),
+      (async () => {
+        try {
+          console.log(`[${new Date().toISOString()}] Fetching all sellers...`);
+          await fetchAllSellers();
+          console.log(`[${new Date().toISOString()}] Successfully loaded ${cache.sellers.size} sellers`);
+        } catch (error) {
+          console.error(`[${new Date().toISOString()}] Failed to load sellers:`, error);
+        }
+      })(),
+      // safeFetch(null, fetchAllPaymentTypes, 'payment types', 'reference data', 'all', false),
+      (async () => {
+        try {
+          console.log(`[${new Date().toISOString()}] Fetching all paymentTypes...`);
+          await fetchAllPaymentTypes();
+          console.log(`[${new Date().toISOString()}] Successfully loaded ${cache.paymentTypes.size} paymentTypes`);
+        } catch (error) {
+          console.error(`[${new Date().toISOString()}] Failed to load paymentTypes:`, error);
+        }
+      })(),
+      // safeFetch(null, fetchAllUsers, 'users', 'reference data', 'all', false),
+      (async () => {
+        try {
+          console.log(`[${new Date().toISOString()}] Fetching all users...`);
+          await fetchAllUsers();
+          console.log(`[${new Date().toISOString()}] Successfully loaded ${cache.users.size} users`);
+        } catch (error) {
+          console.error(`[${new Date().toISOString()}] Failed to load users:`, error);
+        }
+      })(),
       (async () => {
         try {
           console.log(`[${new Date().toISOString()}] Fetching all references...`);
@@ -468,7 +495,7 @@ async function processAllDateRanges() {
       const duration = Date.now() - startTime;
 
       if (data.length > 0) {
-        const fileName = `./data/dtes_type${typeDocument}_${range.year}_${String(range.month).padStart(2, "0")}.xlsx`;
+        const fileName = `./data/dtes/dtes_type${typeDocument}_${range.year}_${String(range.month).padStart(2, "0")}.xlsx`;
         console.log(`[${new Date().toISOString()}] Saving ${data.length} records to ${fileName}`);
         saveToExcel(data, fileName);
         console.log(`[${new Date().toISOString()}] Successfully saved data to ${fileName} in ${duration}ms`);

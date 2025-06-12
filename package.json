@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "node  --experimental-transform-types ./src/estimates.ts"
+    "dev": "node  --experimental-transform-types ./src/dtes.ts"
   },
   "repository": {
     "type": "git",
