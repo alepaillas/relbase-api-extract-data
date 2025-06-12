@@ -440,7 +440,7 @@ async function fetchAllDtesWithDetails(
 
 async function processAllDateRanges() {
   const dateRanges = generateDateRanges();
-  const typeDocument = "33";
+  const typeDocument = "52";
   console.log(`[${new Date().toISOString()}] Starting to process ${dateRanges.length} date ranges`);
 
   for (const [index, range] of dateRanges.entries()) {
