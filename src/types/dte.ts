@@ -2,6 +2,7 @@ import type { DteFile } from "./dte_file.ts";
 import type { Email } from "./email.ts";
 import type { Meta } from "./meta.ts";
 import type { Product } from "./product.ts";
+import type { DteReference } from "./reference.ts";
 
 // Interfaces for DTE data
 export interface Dte {
@@ -90,23 +91,6 @@ export interface SiiTrack {
   ws_status: string | null;
   created_at: string;
   updated_at: string;
-}
-
-export interface DteReference {
-  "id": number,
-  "e_document_id": number,
-  "tpo_doc_ref_id": number,
-  "code_ref": number,
-  "folio_ref": string,
-  "date_ref": string,
-  "razon_ref": string,
-  "rut_otro": string,
-  "created_at": string,
-  "updated_at": string,
-  "is_dte": boolean,
-  "rut_otr": string,
-  "company_id": number,
-  "business_id": number
 }
 
 export interface DteDetail extends Dte {

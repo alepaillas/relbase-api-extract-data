@@ -372,6 +372,36 @@ export function saveToExcel(
             console.log(`[${new Date().toISOString()}] Created Users sheet successfully`);
         }
 
+        // Create References sheet
+        const references = data.flatMap((dte) =>
+            (dte.details?.references || []).map((reference) => ({
+                dte_id: dte.id,
+                dte_folio: dte.folio,
+                id: reference.id,
+                e_document_id: reference.e_document_id,
+                tpo_doc_ref_id: reference.tpo_doc_ref_id,
+                code_ref: reference.code_ref,
+                folio_ref: reference.folio_ref,
+                date_ref: reference.date_ref,
+                razon_ref: reference.razon_ref,
+                rut_otro: reference.rut_otro || '',
+                created_at: reference.created_at,
+                updated_at: reference.updated_at,
+                is_dte: reference.is_dte,
+                rut_otr: reference.rut_otr || '',
+                company_id: reference.company_id,
+                business_id: reference.business_id,
+                reference_name: cache.references.get(reference.tpo_doc_ref_id)?.name || 'Unknown'
+            }))
+        );
+
+        if (references.length > 0) {
+            console.log(`[${new Date().toISOString()}] Creating References sheet with ${references.length} records`);
+            const referencesSheet = XLSX.utils.json_to_sheet(references);
+            XLSX.utils.book_append_sheet(workbook, referencesSheet, "References");
+            console.log(`[${new Date().toISOString()}] Created References sheet successfully`);
+        }
+
         // Write the workbook to a file
         console.log(`[${new Date().toISOString()}] Writing workbook to file: ${fileName}`);
         XLSX.writeFile(workbook, fileName);

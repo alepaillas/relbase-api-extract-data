@@ -17,6 +17,8 @@ import { fetchAllSellers } from "./services/sellers.ts";
 import { fetchAllUsers } from "./services/users.ts";
 import { fetchCity } from "./services/city.ts";
 import { cache } from "./utils/cache.ts";
+import type { Reference } from "./types/reference.ts";
+import { fetchAllReferences } from "./services/references.ts";
 
 // Rate limiting constants
 const MAX_REQUESTS_PER_SECOND = 7;
@@ -312,6 +314,7 @@ type ExtendedDte = Dte & {
   seller?: Seller;
   payment_type?: PaymentType;
   user?: User;
+  references?: Reference[];
 };
 
 // Type guard to check if a value is ExtendedDte
@@ -344,7 +347,8 @@ async function fetchAllDtesWithDetails(
     await Promise.all([
       safeFetch(null, fetchAllSellers, 'sellers', 'reference data', 'all', false),
       safeFetch(null, fetchAllPaymentTypes, 'payment types', 'reference data', 'all', false),
-      safeFetch(null, fetchAllUsers, 'users', 'reference data', 'all', false)
+      safeFetch(null, fetchAllUsers, 'users', 'reference data', 'all', false),
+      safeFetch(null, fetchAllReferences, 'references', 'reference data', 'all', false)
     ]);
     const duration = Date.now() - startTime;
     console.log(`[${new Date().toISOString()}] Reference data pre-fetched in ${duration}ms`);
@@ -374,7 +378,8 @@ async function fetchAllDtesWithDetails(
               commune: undefined,
               seller: undefined,
               payment_type: undefined,
-              user: undefined
+              user: undefined,
+              references: undefined
             };
 
             // Fetch DTE details (critical data)
@@ -440,7 +445,7 @@ async function fetchAllDtesWithDetails(
 
 async function processAllDateRanges() {
   const dateRanges = generateDateRanges();
-  const typeDocument = "52";
+  const typeDocument = "33";
   console.log(`[${new Date().toISOString()}] Starting to process ${dateRanges.length} date ranges`);
 
   for (const [index, range] of dateRanges.entries()) {
